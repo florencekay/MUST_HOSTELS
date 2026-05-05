@@ -1,23 +1,15 @@
 <?php
-// Load configuration, database connection, and session helpers.
 require_once 'includes/config.php';
 
-// Redirect logged-in users directly to their role-specific dashboard.
 if (isLoggedIn()) {
     $role = $_SESSION['role'];
     header("Location: " . SITE_URL . "/{$role}/dashboard.php");
     exit;
 }
 
-// Default error message container for form validation and authentication failures.
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-<<<<<<< HEAD
-    // Get the submitted identifier and password from the login form.
-    // Identifier may be username, email, or registration number.
-=======
->>>>>>> 950300031f0be6e8acfcf1367e97d5baf197f5b0
     $identifier = clean($_POST['identifier'] ?? '');
     $password = $_POST['password'] ?? '';
 
@@ -26,19 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $db = getDB();
         
-<<<<<<< HEAD
-        // Look up a matching user by reg_number, email, or username.
-        // This allows a single login form to support all roles.
-=======
-        // Find user by reg_number, email, or username
->>>>>>> 950300031f0be6e8acfcf1367e97d5baf197f5b0
-        $stmt = $db->prepare(
-            "SELECT * FROM users WHERE (reg_number = ? OR email = ? OR username = ?) LIMIT 1"
-        );
-        $stmt->execute([$identifier, $identifier, $identifier]);
-        $user = $stmt->fetch();
-
-        // Verify password and populate session values on success.
+        // Find user by reg_number or email (auto-detect role)
+        $stmt = $db->prepare("SELECT * FROM users WHERE (reg_number = ? OR email = ?) LIMIT 1");
+        $stmt->bind_param("ss", $identifier, $identifier);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
+        $stmt->close();
+        
         if ($user && password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
@@ -47,11 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['email'] = $user['email'];
             $_SESSION['gender'] = $user['gender'];
 
-            // Redirect the authenticated user to the correct dashboard.
             header("Location: " . SITE_URL . "/{$user['role']}/dashboard.php");
             exit;
         } else {
-            $error = 'Invalid credentials. Please check your username, email, registration number, or password.';
+            $error = 'Invalid credentials. Please check your username/registration number and password.';
         }
     }
 }
@@ -61,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login - MUST Hostel  Allocation</title>
+<title>Login - MUST Hostel Booking System</title>
 <link rel="stylesheet" href="assets/css/style.css">
 <style>
 .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: #aaa; font-size: 12px; }
@@ -75,19 +61,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="login-left">
     <div class="login-hero">
       <div class="school-badge">
-        <div class="badge-icon">M</div>
+        <div class="badge-icon"><img src="image/must.jpeg" alt="MUST Logo"></div>
+        
         <div class="school-name">
           <strong>MUST</strong>
           Malawi University of Science<br>and Technology
         </div>
       </div>
+
       <h1>Hostel Room <span>Booking</span> System</h1>
       <p>Seamlessly manage hostel accommodation for students. Apply, track, pay and get allocated — all in one place.</p>
       <div class="login-features">
         <div class="feature-item"><div class="fi">🏠</div> Random & Manual Room Allocation</div>
         <div class="feature-item"><div class="fi">📧</div> Email Notifications & Receipts</div>
         <div class="feature-item"><div class="fi">💳</div> Invoice & Payment Tracking</div>
-        <div class="feature-item"><div class="fi"></div> Special Needs Support</div>
+        <div class="feature-item"><div class="fi">♿</div> Special Needs Support</div>
       </div>
     </div>
   </div>
@@ -98,20 +86,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p>Sign in to your account to continue</p>
 
       <?php if ($error): ?>
-      <div class="alert alert-danger"> <?= htmlspecialchars($error) ?></div>
+      <div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
       <?php if (isset($_GET['registered'])): ?>
-      <div class="alert alert-success">Account created! You can now log in.</div>
+      <div class="alert alert-success">✅ Account created! You can now log in.</div>
       <?php endif; ?>
       <?php if (isset($_GET['error']) && $_GET['error'] === 'unauthorized'): ?>
-      <div class="alert alert-warning"> You don't have permission to access that page.</div>
+      <div class="alert alert-warning">⚠️ You don't have permission to access that page.</div>
       <?php endif; ?>
 
       <form method="POST" id="loginForm">
         <div class="form-group">
-          <label>Username / Email / Registration Number</label>
+          <label>Username / Registration Number</label>
           <input type="text" name="identifier" id="identifier"
-                 placeholder="Enter your username, email, or registration number" required
+                 placeholder="e.g. ADMIN001, OPR001, or MU/STU/2024/001" required
                  value="<?= htmlspecialchars($_POST['identifier'] ?? '') ?>">
         </div>
 
@@ -130,9 +118,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="register-link">
         New student? <a href="register.php">Create your account</a>
       </div>
-    </div>
+
+    
+    
   </div>
 </div>
+
 
 </body>
 </html>
